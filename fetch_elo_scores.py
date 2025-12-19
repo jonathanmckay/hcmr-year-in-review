@@ -3,6 +3,7 @@ from datetime import datetime
 
 # 1) Download the daily score history (Text/Vision) JSON
 url = "https://raw.githubusercontent.com/nakasyou/lmarena-history/main/output/scores.json"
+print("Fetching data from lmarena-history...")
 data = requests.get(url, timeout=60).json()
 
 # 2) Flatten: date, arena=text, category=overall, model_id, elo
@@ -24,16 +25,17 @@ df["month"] = df["date"].dt.to_period("M").dt.to_timestamp()
 df = df.sort_values(["model_id", "date"])
 month_end = df.groupby(["month", "model_id"], as_index=False).tail(1)
 
-# 4) Last 12 months (relative to "today" on your machine)
-cutoff = (pd.Timestamp.today().to_period("M") - 11).to_timestamp()
-month_end_12 = month_end[month_end["month"] >= cutoff].copy()
+# 4) Get ALL available data (full history)
+month_end_all = month_end.copy()
 
-# Optional: keep only models with enough coverage
-# month_end_12 = month_end_12.groupby("model_id").filter(lambda g: len(g) >= 10)
+# Save to CSV
+month_end_all.to_csv("lmarena_text_overall_elo_monthly.csv", index=False)
 
-month_end_12.to_csv("lmarena_text_overall_elo_monthly_last12.csv", index=False)
-print(month_end_12.head(20))
-print(f"\nTotal rows: {len(month_end_12)}")
-print(f"Unique models: {month_end_12['model_id'].nunique()}")
-print(f"Date range: {month_end_12['month'].min()} to {month_end_12['month'].max()}")
-
+print(f"\nData saved to lmarena_text_overall_elo_monthly.csv")
+print(f"Total rows: {len(month_end_all)}")
+print(f"Unique models: {month_end_all['model_id'].nunique()}")
+print(f"Date range: {month_end_all['month'].min().strftime('%Y-%m')} to {month_end_all['month'].max().strftime('%Y-%m')}")
+print(f"\nMonths available:")
+for m in sorted(month_end_all['month'].unique()):
+    count = len(month_end_all[month_end_all['month'] == m])
+    print(f"  {m.strftime('%Y-%m')}: {count} models")
